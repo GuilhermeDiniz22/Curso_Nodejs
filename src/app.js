@@ -70,15 +70,29 @@ app.put('/livros/:id', (req, res) =>{
 
     const index = buscaIndex(req.params.id, livros)
 
+    if(!livro){
+        res.status(401).send("Livro com id: "+ req.params.id + " não encontrado!")
+    }
+
     livros[index].titulo = req.body.titulo;
     livros[index].autor = req.body.autor;
     livros[index].ano = req.body.ano;  
     livros[index].genero = req.body.genero;
-    
-   
 
     res.status(200).send("Livro atualizado!")
 });
+
+app.delete('/livros/:id', (req, res) =>{
+  const index = buscaIndex(req.params.id, livros);
+
+  if(!index){
+        res.status(401).send("Livro com id: "+ req.params.id + " não encontrado!")
+  }
+
+  livros.splice(index, 1);
+
+  res.status(200).send("Livro deletado com sucesso!", livros)
+})
 
 function buscaIndex(id, array){
     return array.findIndex(item => {
