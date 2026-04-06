@@ -1,103 +1,80 @@
 import express from 'express';
+import conecta from './config/db.js';
+import Livro from './models/livro.js';
+
+const conexao = await conecta();
+
+conexao.on("error", (erro) =>{
+  console.error("erro de conexão: ", erro)
+});
+
+conexao.once("open", ()=>{
+  console.log("conexão realizada com sucesso!")
+});
 
 const app = express();
 app.use(express.json());
-
-const livros = [
-  {
-    id: 1,
-    titulo: "Dom Casmurro",
-    autor: "Machado de Assis",
-    ano: 1899,
-    genero: "Romance"
-  },
-  {
-    id: 2,
-    titulo: "O Senhor dos Anéis",
-    autor: "J.R.R. Tolkien",
-    ano: 1954,
-    genero: "Fantasia"
-  },
-  {
-    id: 3,
-    titulo: "1984",
-    autor: "George Orwell",
-    ano: 1949,
-    genero: "Distopia"
-  },
-  {
-    id: 4,
-    titulo: "A Revolução dos Bichos",
-    autor: "George Orwell",
-    ano: 1945,
-    genero: "Sátira"
-  },
-  {
-    id: 5,
-    titulo: "O Pequeno Príncipe",
-    autor: "Antoine de Saint-Exupéry",
-    ano: 1943,
-    genero: "Fábula"
-  }
-];
 
 app.get('/', (req, res) =>{
     res.status(200).send("Curso de node js");
 });
 
-app.get('/livros', (req, res) =>{
-    res.status(200).json(livros);
+app.get('/livros', async (req, res) =>{
+    try {
+      const livros = await Livro.find();
+      res.status(200).json(livros);
+    } catch (erro) {
+      res.status(500).json({mensagem: "Erro ao buscar livros", erro});
+    }
 });
 
-app.get('/livros/:id', (req, res) =>{
-    const livroId = parseInt(req.params.id);
-    const livro = livros.find(l => l.id == livroId);
-
+app.get("/livros/:id", async (req, res) => {
+  try {
+    const livro = await Livro.findById(req.params.id);
     if(!livro){
-        res.status(401).send("Livro com id: "+ livroId + " não encontrado!")
+      res.status(404).json({mensagem: "Livro não encontrado"});
+      return;
     }
-
     res.status(200).json(livro);
-});
-
-app.post('/livros', (req, res) =>{
-    livros.push(req.body);
-    res.status(201).send("Livro cadastrado!")
-});
-
-app.put('/livros/:id', (req, res) =>{
-    
-
-    const index = buscaIndex(req.params.id, livros)
-
-    if(!livro){
-        res.status(401).send("Livro com id: "+ req.params.id + " não encontrado!")
-    }
-
-    livros[index].titulo = req.body.titulo;
-    livros[index].autor = req.body.autor;
-    livros[index].ano = req.body.ano;  
-    livros[index].genero = req.body.genero;
-
-    res.status(200).send("Livro atualizado!")
-});
-
-app.delete('/livros/:id', (req, res) =>{
-  const index = buscaIndex(req.params.id, livros);
-
-  if(!index){
-        res.status(401).send("Livro com id: "+ req.params.id + " não encontrado!")
+  } catch (erro) {
+    res.status(500).json({mensagem: "Erro ao buscar livro", erro});
   }
+});
 
-  livros.splice(index, 1);
+app.post("/livros", async (req, res) => {
+  try {
+    const livro = new Livro(req.body);
+    await livro.save();
+    res.status(201).json({mensagem: "Livro cadastrado com sucesso", livro});
+  } catch (erro) {
+    res.status(400).json({mensagem: "Erro ao cadastrar livro", erro});
+  }
+});
 
-  res.status(200).send("Livro deletado com sucesso!", livros)
+app.put('/livros/:id', async (req, res) =>{
+  try {
+    const livro = await Livro.findByIdAndUpdate(req.params.id, req.body, {new: true});
+    if(!livro){
+      res.status(404).json({mensagem: "Livro com id: "+ req.params.id + " não encontrado!"});
+      return;
+    }
+    res.status(200).json({mensagem: "Livro atualizado!", livro});
+  } catch (erro) {
+    res.status(400).json({mensagem: "Erro ao atualizar livro", erro});
+  }
+});
+
+app.delete('/livros/:id', async (req, res) =>{
+  try {
+    const livro = await Livro.findByIdAndDelete(req.params.id);
+    if(!livro){
+      res.status(404).json({mensagem: "Livro com id: "+ req.params.id + " não encontrado!"});
+      return;
+    }
+    res.status(200).json({mensagem: "Livro deletado com sucesso!"})
+  } catch (erro) {
+    res.status(400).json({mensagem: "Erro ao deletar livro", erro});
+  }
 })
-
-function buscaIndex(id, array){
-    return array.findIndex(item => {
-        return item.id === Number(id);
-    })
-}
 
 export default app;
