@@ -1,0 +1,91 @@
+import Livro from "../models/livro.js";
+
+class LivroController {
+    
+  static async homepage(req, res) {
+     res.status(200).send("Curso de node js");
+    };
+  
+  static async listarLivros(req, res) {
+    try {
+      const livros = await Livro.find();
+      res.status(200).json(livros);
+    } catch (error) {
+      res
+        .status(500)
+        .json({ mensagem: "Erro ao buscar livros", erro: error.message });
+    }
+  }
+
+  static async criarLivro(req, res) {
+    try {
+      const camposObrigatorios = ["titulo", "autor", "ano", "genero"];
+      const camposFaltantes = camposObrigatorios.filter(
+        (campo) => !req.body[campo],
+      );
+
+      if (camposFaltantes.length) {
+        return res.status(400).json({
+          message: "Campos obrigatórios faltando",
+          missingFields: camposFaltantes,
+        });
+      }
+
+      const novo = await Livro.create(req.body);
+
+      res.status(201).json({
+        message: "Livro criado com sucesso",
+        livro: novo,
+      });
+    } catch (error) {
+      if (error.name === "ValidationError") {
+        return res.status(400).json({
+          message: "Dados do livro inválidos",
+          erros: error.errors,
+        });
+      }
+
+      res.status(500).json({
+        message: "Erro ao cadastrar livro",
+        error: error.message,
+      });
+    }
+  }
+
+  static async buscarLivroPorId(req, res) {
+    try {
+      const livro = await Livro.findById(req.params.id);
+      if (!livro) {
+        return res.status(404).json({ mensagem: "Livro não encontrado" });
+      }
+      res.status(200).json(livro);
+    } catch (error) {
+      res.status(500).json({ mensagem: "Erro ao buscar livro", erro: error.message });
+    }
+  }
+
+  static async atualizarLivro(req, res) {
+    try {
+      const livro = await Livro.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      if (!livro) {
+        return res.status(404).json({ mensagem: "Livro não encontrado" });
+      }
+      res.status(200).json({ mensagem: "Livro atualizado!", livro });
+    } catch (error) {
+      res.status(500).json({ mensagem: "Erro ao atualizar livro", erro: error.message });
+    }
+  }
+
+  static async deletarLivro(req, res) {
+    try {
+      const livro = await Livro.findByIdAndDelete(req.params.id);
+      if (!livro) {
+        return res.status(404).json({ mensagem: "Livro não encontrado" });
+      }
+      res.status(200).json({ mensagem: "Livro deletado com sucesso!" });
+    } catch (error) {
+      res.status(500).json({ mensagem: "Erro ao deletar livro", erro: error.message });
+    }
+  }
+}
+export default LivroController;
