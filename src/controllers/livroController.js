@@ -20,6 +20,7 @@ class LivroController {
 
   static async criarLivro(req, res) {
     const livro = req.body;
+    livro.genero = livro.genero.charAt(0).toUpperCase() + livro.genero.slice(1).toLowerCase();
     try {
       const camposObrigatorios = ["titulo", "autor", "ano", "genero"];
       const camposFaltantes = camposObrigatorios.filter(
@@ -77,7 +78,7 @@ class LivroController {
 
   static async atualizarLivro(req, res) {
     try {
-      const livro = await Livro.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      const livro = await Livro.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate("autor");
       if (!livro) {
         return res.status(404).json({ mensagem: "Livro não encontrado" });
       }
@@ -96,6 +97,18 @@ class LivroController {
       res.status(200).json({ mensagem: "Livro deletado com sucesso!" });
     } catch (error) {
       res.status(500).json({ mensagem: "Erro ao deletar livro", erro: error.message });
+    }
+  }
+
+  static async buscarLivrosPorGenero(req, res){
+    const genero = req.params.genero.charAt(0).toUpperCase() + req.params.genero.slice(1).toLowerCase();
+    try {
+      const livrosPorGenero = await Livro.find({genero: genero}).populate("autor");
+      res.status(200).json(livrosPorGenero);
+    } catch (error) {
+      res.status(404).json({
+        message: `Livros não encontrados por gênero: ${genero}`
+      });
     }
   }
 }
