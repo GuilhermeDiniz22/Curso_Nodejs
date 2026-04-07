@@ -1,3 +1,4 @@
+import Autor from "../models/autor.js";
 import Livro from "../models/livro.js";
 
 class LivroController {
@@ -8,7 +9,7 @@ class LivroController {
   
   static async listarLivros(req, res) {
     try {
-      const livros = await Livro.find();
+      const livros = await Livro.find().populate("autor");
       res.status(200).json(livros);
     } catch (error) {
       res
@@ -18,6 +19,7 @@ class LivroController {
   }
 
   static async criarLivro(req, res) {
+    const livro = req.body;
     try {
       const camposObrigatorios = ["titulo", "autor", "ano", "genero"];
       const camposFaltantes = camposObrigatorios.filter(
@@ -31,11 +33,20 @@ class LivroController {
         });
       }
 
-      const novo = await Livro.create(req.body);
+      const autor = await Autor.findById(livro.autor);
+
+      if(!autor){
+        return res.status(404).json({
+          message: "Autor não encontrado!"
+        });
+      }
+
+      const livroCompleto = { ...livro, autor: autor._id };
+      const livroCriado = await Livro.create(livroCompleto);
 
       res.status(201).json({
         message: "Livro criado com sucesso",
-        livro: novo,
+        livro: livroCriado,
       });
     } catch (error) {
       if (error.name === "ValidationError") {
@@ -54,7 +65,7 @@ class LivroController {
 
   static async buscarLivroPorId(req, res) {
     try {
-      const livro = await Livro.findById(req.params.id);
+      const livro = await Livro.findById(req.params.id).populate("autor");
       if (!livro) {
         return res.status(404).json({ mensagem: "Livro não encontrado" });
       }

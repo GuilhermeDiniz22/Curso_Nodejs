@@ -1,6 +1,6 @@
 import express from 'express';
 import conecta from './config/db.js';
-import routes from './routes/livrosRoutes.js';
+import routes from './routes/rotas.js';
 
 const conexao = await conecta();
 
