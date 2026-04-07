@@ -1,5 +1,7 @@
+import mongoose from "mongoose";
 import Autor from "../models/autor.js";
 import Livro from "../models/livro.js";
+import { tratarErroValidacao, tratarErroCastId, tratarErroGenerico, validarCamposObrigatorios, responderErroValidacao } from "../utils/erros.js";
 
 class LivroController {
     
@@ -23,16 +25,10 @@ class LivroController {
     livro.genero = livro.genero.charAt(0).toUpperCase() + livro.genero.slice(1).toLowerCase();
     try {
       const camposObrigatorios = ["titulo", "autor", "ano", "genero"];
-      const camposFaltantes = camposObrigatorios.filter(
-        (campo) => !req.body[campo],
-      );
+      const camposFaltantes = validarCamposObrigatorios(req.body, camposObrigatorios);
 
-      if (camposFaltantes.length) {
-        return res.status(400).json({
-          message: "Campos obrigatórios faltando",
-          missingFields: camposFaltantes,
-        });
-      }
+      const erro = responderErroValidacao(res, camposFaltantes);
+      if (erro) return;
 
       const autor = await Autor.findById(livro.autor);
 
@@ -50,17 +46,8 @@ class LivroController {
         livro: livroCriado,
       });
     } catch (error) {
-      if (error.name === "ValidationError") {
-        return res.status(400).json({
-          message: "Dados do livro inválidos",
-          erros: error.errors,
-        });
-      }
-
-      res.status(500).json({
-        message: "Erro ao cadastrar livro",
-        error: error.message,
-      });
+      if (tratarErroValidacao(res, error)) return;
+      tratarErroGenerico(res, error, "Erro ao cadastrar livro");
     }
   }
 
@@ -72,7 +59,8 @@ class LivroController {
       }
       res.status(200).json(livro);
     } catch (error) {
-      res.status(500).json({ mensagem: "Erro ao buscar livro", erro: error.message });
+      if (tratarErroCastId(res, error, "livro")) return;
+      tratarErroGenerico(res, error, "Erro ao buscar livro");
     }
   }
 
@@ -84,7 +72,9 @@ class LivroController {
       }
       res.status(200).json({ mensagem: "Livro atualizado!", livro });
     } catch (error) {
-      res.status(500).json({ mensagem: "Erro ao atualizar livro", erro: error.message });
+      if (tratarErroValidacao(res, error)) return;
+      if (tratarErroCastId(res, error, "livro")) return;
+      tratarErroGenerico(res, error, "Erro ao atualizar livro");
     }
   }
 
@@ -96,7 +86,9 @@ class LivroController {
       }
       res.status(200).json({ mensagem: "Livro deletado com sucesso!" });
     } catch (error) {
-      res.status(500).json({ mensagem: "Erro ao deletar livro", erro: error.message });
+      if (tratarErroValidacao(res, error)) return;
+      if (tratarErroCastId(res, error, "livro")) return;
+      tratarErroGenerico(res, error, "Erro ao deletar livro");
     }
   }
 
@@ -106,9 +98,7 @@ class LivroController {
       const livrosPorGenero = await Livro.find({genero: genero}).populate("autor");
       res.status(200).json(livrosPorGenero);
     } catch (error) {
-      res.status(404).json({
-        message: `Livros não encontrados por gênero: ${genero}`
-      });
+      tratarErroGenerico(res, error, `Livros não encontrados por gênero: ${genero}`);
     }
   }
 }
