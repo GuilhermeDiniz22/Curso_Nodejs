@@ -28,11 +28,17 @@ export const validarCamposObrigatorios = (body, camposObrigatorios) => {
   return camposObrigatorios.filter((campo) => !body[campo]);
 };
 
-export const responderErroValidacao = (res, camposFaltantes) => {
-  if (camposFaltantes.length) {
-    return res.status(400).json({
-      message: "Campos obrigatórios faltando",
-      missingFields: camposFaltantes,
-    });
-  }
+export const calcularPaginacao = (page, limit, total) => {
+  const currentPage = parseInt(page) || 1;
+  const itemsPerPage = parseInt(limit) || 10;
+  const totalPages = Math.ceil(total / itemsPerPage);
+  const skip = (currentPage - 1) * itemsPerPage;
+
+  return {
+    currentPage,
+    itemsPerPage,
+    totalPages,
+    totalItems: total,
+    skip
+  };
 };

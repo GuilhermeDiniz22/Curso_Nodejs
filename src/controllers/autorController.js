@@ -1,15 +1,23 @@
 import Autor from "../models/autor.js";
-import { tratarErroValidacao, tratarErroCastId, tratarErroGenerico, validarCamposObrigatorios, responderErroValidacao } from "../utils/erros.js";
+import { tratarErroValidacao, tratarErroCastId, tratarErroGenerico, validarCamposObrigatorios, responderErroValidacao, calcularPaginacao } from "../utils/erros.js";
 
 class AutorController {
   static async listarAutores(req, res) {
     try {
-      const autores = await Autor.find();
-      res.status(200).json(autores);
+      const { page = 1, limit = 10 } = req.query;
+      const total = await Autor.countDocuments();
+      const paginacao = calcularPaginacao(page, limit, total);
+
+      const autores = await Autor.find()
+        .skip(paginacao.skip)
+        .limit(paginacao.itemsPerPage);
+
+      res.status(200).json({
+        autores,
+        paginacao
+      });
     } catch (error) {
-      res
-        .status(500)
-        .json({ mensagem: "Erro ao buscar autores", erro: error.message });
+      tratarErroGenerico(res, error, "Erro ao buscar autores");
     }
   }
 

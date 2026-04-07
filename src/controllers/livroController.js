@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import Autor from "../models/autor.js";
 import Livro from "../models/livro.js";
-import { tratarErroValidacao, tratarErroCastId, tratarErroGenerico, validarCamposObrigatorios, responderErroValidacao } from "../utils/erros.js";
+import { tratarErroValidacao, tratarErroCastId, tratarErroGenerico, validarCamposObrigatorios, responderErroValidacao, calcularPaginacao } from "../utils/erros.js";
 
 class LivroController {
     
@@ -11,12 +11,21 @@ class LivroController {
   
   static async listarLivros(req, res) {
     try {
-      const livros = await Livro.find().populate("autor");
-      res.status(200).json(livros);
+      const { page = 1, limit = 10 } = req.query;
+      const total = await Livro.countDocuments();
+      const paginacao = calcularPaginacao(page, limit, total);
+
+      const livros = await Livro.find()
+        .populate("autor")
+        .skip(paginacao.skip)
+        .limit(paginacao.itemsPerPage);
+
+      res.status(200).json({
+        livros,
+        paginacao
+      });
     } catch (error) {
-      res
-        .status(500)
-        .json({ mensagem: "Erro ao buscar livros", erro: error.message });
+      tratarErroGenerico(res, error, "Erro ao buscar livros");
     }
   }
 
@@ -95,10 +104,21 @@ class LivroController {
   static async buscarLivrosPorGenero(req, res){
     const genero = req.params.genero.charAt(0).toUpperCase() + req.params.genero.slice(1).toLowerCase();
     try {
-      const livrosPorGenero = await Livro.find({genero: genero}).populate("autor");
-      res.status(200).json(livrosPorGenero);
+      const { page = 1, limit = 10 } = req.query;
+      const total = await Livro.countDocuments({ genero });
+      const paginacao = calcularPaginacao(page, limit, total);
+
+      const livrosPorGenero = await Livro.find({genero})
+        .populate("autor")
+        .skip(paginacao.skip)
+        .limit(paginacao.itemsPerPage);
+
+      res.status(200).json({
+        livros: livrosPorGenero,
+        paginacao
+      });
     } catch (error) {
-      tratarErroGenerico(res, error, `Livros não encontrados por gênero: ${genero}`);
+      tratarErroGenerico(res, error, `Erro ao buscar livros por gênero: ${genero}`);
     }
   }
 }
